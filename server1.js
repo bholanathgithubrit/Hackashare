@@ -2,57 +2,24 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const multer = require('multer');
-const Web3 = require('web3'); // Library to interact with the blockchain
+const Web3 = require('web3'); // Updated import for Web3
+const { HttpProvider } = require('web3-providers-http');
+const { Transaction } = require('@ethereumjs-tx'); // Updated import for Transaction
+const Common = require('@ethereumjs-common').default; // Correct import for Common
 
 const app = express();
 const PORT = 5000;
 
+// Your contract ABI
 const abi = [{
-        "anonymous": false,
         "inputs": [{
-                "indexed": true,
-                "internalType": "address",
-                "name": "userAddress",
-                "type": "address"
-            },
-            {
-                "indexed": false,
                 "internalType": "string",
-                "name": "eventName",
+                "name": "_lat",
                 "type": "string"
             },
             {
-                "indexed": false,
                 "internalType": "string",
-                "name": "description",
-                "type": "string"
-            }
-        ],
-        "name": "EventCreated",
-        "type": "event"
-    },
-    {
-        "anonymous": false,
-        "inputs": [{
-                "indexed": true,
-                "internalType": "address",
-                "name": "userAddress",
-                "type": "address"
-            },
-            {
-                "indexed": false,
-                "internalType": "string",
-                "name": "username",
-                "type": "string"
-            }
-        ],
-        "name": "UserRegistered",
-        "type": "event"
-    },
-    {
-        "inputs": [{
-                "internalType": "string",
-                "name": "_eventName",
+                "name": "_lng",
                 "type": "string"
             },
             {
@@ -62,51 +29,103 @@ const abi = [{
             },
             {
                 "internalType": "string",
-                "name": "_date",
-                "type": "string"
-            },
-            {
-                "internalType": "uint256",
-                "name": "_latitude",
-                "type": "uint256"
-            },
-            {
-                "internalType": "uint256",
-                "name": "_longitude",
-                "type": "uint256"
-            },
-            {
-                "internalType": "string",
-                "name": "_fileUrl",
+                "name": "_filePath",
                 "type": "string"
             }
         ],
-        "name": "createEvent",
+        "name": "addLocation",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "anonymous": false,
+        "inputs": [{
+            "indexed": true,
+            "internalType": "string",
+            "name": "fileHash",
+            "type": "string"
+        }],
+        "name": "NewFile",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [{
+            "indexed": true,
+            "internalType": "uint256",
+            "name": "locationId",
+            "type": "uint256"
+        }],
+        "name": "NewLocation",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [{
+            "indexed": true,
+            "internalType": "address",
+            "name": "user",
+            "type": "address"
+        }],
+        "name": "NewUser",
+        "type": "event"
+    },
+    {
+        "inputs": [{
+                "internalType": "string",
+                "name": "_username",
+                "type": "string"
+            },
+            {
+                "internalType": "string",
+                "name": "_email",
+                "type": "string"
+            },
+            {
+                "internalType": "string",
+                "name": "_password",
+                "type": "string"
+            }
+        ],
+        "name": "signUp",
         "outputs": [],
         "stateMutability": "nonpayable",
         "type": "function"
     },
     {
         "inputs": [{
-            "internalType": "uint256",
-            "name": "index",
-            "type": "uint256"
-        }],
-        "name": "getEvent",
-        "outputs": [{
                 "internalType": "string",
-                "name": "eventName",
+                "name": "_fileHash",
                 "type": "string"
             },
             {
-                "internalType": "uint256",
-                "name": "latitude",
-                "type": "uint256"
+                "internalType": "string",
+                "name": "_filePath",
+                "type": "string"
+            }
+        ],
+        "name": "uploadFile",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [{
+            "internalType": "string",
+            "name": "",
+            "type": "string"
+        }],
+        "name": "files",
+        "outputs": [{
+                "internalType": "string",
+                "name": "hash",
+                "type": "string"
             },
             {
-                "internalType": "uint256",
-                "name": "longitude",
-                "type": "uint256"
+                "internalType": "string",
+                "name": "filePath",
+                "type": "string"
             }
         ],
         "stateMutability": "view",
@@ -114,43 +133,53 @@ const abi = [{
     },
     {
         "inputs": [],
-        "name": "getEvents",
+        "name": "locationCounter",
         "outputs": [{
-            "components": [{
-                    "internalType": "string",
-                    "name": "eventName",
-                    "type": "string"
-                },
-                {
-                    "internalType": "string",
-                    "name": "description",
-                    "type": "string"
-                },
-                {
-                    "internalType": "string",
-                    "name": "date",
-                    "type": "string"
-                },
-                {
-                    "internalType": "string",
-                    "name": "fileUrl",
-                    "type": "string"
-                },
-                {
-                    "internalType": "uint256",
-                    "name": "latitude",
-                    "type": "uint256"
-                },
-                {
-                    "internalType": "uint256",
-                    "name": "longitude",
-                    "type": "uint256"
-                }
-            ],
-            "internalType": "struct EventManager.Event[]",
+            "internalType": "uint256",
             "name": "",
-            "type": "tuple[]"
+            "type": "uint256"
         }],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [{
+            "internalType": "uint256",
+            "name": "",
+            "type": "uint256"
+        }],
+        "name": "locations",
+        "outputs": [{
+                "internalType": "uint256",
+                "name": "id",
+                "type": "uint256"
+            },
+            {
+                "internalType": "string",
+                "name": "lat",
+                "type": "string"
+            },
+            {
+                "internalType": "string",
+                "name": "lng",
+                "type": "string"
+            },
+            {
+                "internalType": "string",
+                "name": "description",
+                "type": "string"
+            },
+            {
+                "internalType": "string",
+                "name": "filePath",
+                "type": "string"
+            },
+            {
+                "internalType": "uint256",
+                "name": "timestamp",
+                "type": "uint256"
+            }
+        ],
         "stateMutability": "view",
         "type": "function"
     },
@@ -177,35 +206,58 @@ const abi = [{
     },
     {
         "inputs": [{
+            "internalType": "address",
+            "name": "",
+            "type": "address"
+        }],
+        "name": "users",
+        "outputs": [{
                 "internalType": "string",
-                "name": "_username",
+                "name": "username",
                 "type": "string"
             },
             {
                 "internalType": "string",
-                "name": "_email",
+                "name": "email",
                 "type": "string"
             },
             {
                 "internalType": "string",
-                "name": "_password",
+                "name": "password",
                 "type": "string"
             }
         ],
-        "name": "signup",
-        "outputs": [],
-        "stateMutability": "nonpayable",
+        "stateMutability": "view",
         "type": "function"
     }
 ];
-const contractAddress = '0xd9145CCE52D386f254917e481eB44e9943F39138'; // Replace with your contract address
+const contractAddress = '0xD7ACd2a9FD159E69Bb102A1ca21C9a3e3A5F771B'; // Replace with your contract address
 
-// Connect to an Ethereum node (Replace with your actual provider)
-const web3 = new Web3(new Web3.providers.HttpProvider('https://eth-mainnet.g.alchemy.com/v2/-pWYYtxO4EGvuPdSxjRoK6_cHUWVgBkI'));
-const contract = new web3.eth.Contract(abi, contractAddress); // Initialize the contract
+// Initialize Web3 and contract instance
+const provider = new Web3.providers.HttpProvider('https://eth-mainnet.g.alchemy.com/v2/-pWYYtxO4EGvuPdSxjRoK6_cHUWVgBkI');
+const web3 = new Web3(provider);
+const contract = new web3.eth.Contract(abi, contractAddress);
 
+// Replace with your private key (DO NOT expose this key publicly or commit it to code repositories)
+const privateKey = Buffer.from('830b8bcf30fcc72af1459ad32a955b9f0d80d3e56e992e96e85ee99315380b52', 'hex');
+const senderAddress = '0xD5bb55207be4Ad31ee1cC67a5923744DE558f8aC'; // Replace with your address
+
+// Middleware
 app.use(cors());
 app.use(bodyParser.json());
+
+// Setup for file uploads using multer
+const upload = multer({ dest: 'uploads/' });
+
+// Utility function to sign and send transactions
+async function signAndSendTransaction(txData) {
+    const common = new Common({ chain: 'mainnet' }); // Specify the network
+    const tx = Transaction.fromTxData(txData, { common });
+    const signedTx = tx.sign(privateKey);
+    const serializedTx = signedTx.serialize();
+
+    return web3.eth.sendSignedTransaction('0x' + serializedTx.toString('hex'));
+}
 
 // Signup endpoint
 app.post('/signup', async(req, res) => {
@@ -216,14 +268,15 @@ app.post('/signup', async(req, res) => {
     }
 
     try {
-        // Check if user already exists
-        const userExists = await contract.methods.login(email, password).call({ from: '0xD5bb55207be4Ad31ee1cC67a5923744DE558f8aC' });
-        if (userExists) {
-            return res.status(409).json({ message: 'User already registered' });
-        }
+        const txData = {
+            to: contractAddress,
+            data: contract.methods.signUp(username, email, password).encodeABI(),
+            gas: await contract.methods.signUp(username, email, password).estimateGas({ from: senderAddress }),
+            gasPrice: await web3.eth.getGasPrice(),
+            nonce: await web3.eth.getTransactionCount(senderAddress),
+        };
 
-        // Register the user
-        await contract.methods.signup(username, email, password).send({ from: '0xD5bb55207be4Ad31ee1cC67a5923744DE558f8aC' });
+        await signAndSendTransaction(txData);
         res.status(201).json({ message: 'User signed up successfully' });
     } catch (error) {
         console.error('Error signing up user:', error);
@@ -240,11 +293,11 @@ app.post('/login', async(req, res) => {
     }
 
     try {
-        const isAuthenticated = await contract.methods.login(email, password).call({ from: '0xYourAccountAddress' });
+        const isAuthenticated = await contract.methods.login(email, password).call({ from: senderAddress });
         if (isAuthenticated) {
             res.status(200).json({ message: 'Login successful' });
         } else {
-            res.status(400).json({ message: 'Invalid email or password' });
+            res.status(401).json({ message: 'Invalid email or password' });
         }
     } catch (error) {
         console.error('Error logging in:', error);
@@ -252,30 +305,41 @@ app.post('/login', async(req, res) => {
     }
 });
 
-// Setup for file uploads using multer
-const upload = multer({ dest: 'uploads/' });
-
-// Handle adding a new event
-app.post('/add-event', upload.single('file'), async(req, res) => {
-    const { eventName, description, date, latitude, longitude } = req.body;
-    const fileUrl = req.file ? `http://localhost:${PORT}/uploads/${req.file.filename}` : null;
+// Add Location endpoint
+app.post('/add-location', upload.single('file'), async(req, res) => {
+    const { lat, lng, description, filePath } = req.body;
 
     try {
-        await contract.methods.createEvent(eventName, description, date, latitude, longitude, fileUrl).send({ from: '0xYourAccountAddress' });
-        res.status(200).json({ message: 'Event added successfully' });
+        const txData = {
+            to: contractAddress,
+            data: contract.methods.addLocation(lat, lng, description, filePath).encodeABI(),
+            gas: await contract.methods.addLocation(lat, lng, description, filePath).estimateGas({ from: senderAddress }),
+            gasPrice: await web3.eth.getGasPrice(),
+            nonce: await web3.eth.getTransactionCount(senderAddress),
+        };
+
+        await signAndSendTransaction(txData);
+        res.status(200).json({ message: 'Location added successfully' });
     } catch (error) {
-        console.error('Error adding event:', error);
-        res.status(500).json({ message: 'Error storing event on the blockchain' });
+        console.error('Error adding location:', error);
+        res.status(500).json({ message: 'Error storing location on the blockchain' });
     }
 });
 
-// Fetch all events for the current user
-app.get('/events', async(req, res) => {
+// Fetch all locations
+app.get('/locations', async(req, res) => {
     try {
-        const events = await contract.methods.getEvents().call({ from: '0xYourAccountAddress' });
-        res.json(events);
+        const locationCounter = await contract.methods.locationCounter().call();
+        const locations = [];
+
+        for (let i = 0; i < locationCounter; i++) {
+            const location = await contract.methods.locations(i).call();
+            locations.push(location);
+        }
+
+        res.json(locations);
     } catch (error) {
-        console.error('Error fetching events:', error);
+        console.error('Error fetching locations:', error);
         res.status(500).send('Internal Server Error');
     }
 });

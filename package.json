@@ -1,9 +1,13 @@
 {
   "dependencies": {
+    "@ethereumjs/tx": "^5.4.0",
     "body-parser": "^1.20.2",
     "cors": "^2.8.5",
+    "ethereumjs-tx": "^2.1.2",
     "express": "^4.19.2",
     "multer": "^1.4.5-lts.1",
-    "nodemon": "^3.1.4"
+    "nodemon": "^3.1.4",
+    "web": "^0.0.2",
+    "web3": "^4.12.1"
   }
 }
